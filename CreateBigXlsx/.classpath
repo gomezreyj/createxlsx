@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/Java"/>
+	<classpathentry kind="lib" path="C:/TestBigXLSX/CreateBigXlsx/poi-3.11/poi-3.11-20141221.jar"/>
+	<classpathentry kind="lib" path="C:/TestBigXLSX/CreateBigXlsx/poi-3.11/poi-examples-3.11-20141221.jar"/>
+	<classpathentry kind="lib" path="C:/TestBigXLSX/CreateBigXlsx/poi-3.11/poi-excelant-3.11-20141221.jar"/>
+	<classpathentry kind="lib" path="C:/TestBigXLSX/CreateBigXlsx/poi-3.11/poi-ooxml-3.11-20141221.jar"/>
+	<classpathentry kind="lib" path="C:/TestBigXLSX/CreateBigXlsx/poi-3.11/poi-ooxml-schemas-3.11-20141221.jar"/>
+	<classpathentry kind="lib" path="C:/TestBigXLSX/CreateBigXlsx/poi-3.11/poi-scratchpad-3.11-20141221.jar"/>
+	<classpathentry kind="lib" path="C:/TestBigXLSX/CreateBigXlsx/poi-3.11/ooxml-lib/xmlbeans-2.6.0.jar"/>
+	<classpathentry kind="lib" path="C:/TestBigXLSX/CreateBigXlsx/junit-4.4.jar"/>
+	<classpathentry kind="lib" path="C:/TestBigXLSX/CreateBigXlsx/ojdbc6.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

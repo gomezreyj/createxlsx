@@ -1,0 +1,21 @@
+<phmsa>
+	<views>
+  		<view>PHMSA_MAOP_V_192_619_A2</view>
+  		<view>PHMSA_MAOP_V_192_619_A3</view>
+  		<view>PHMSA_MAOP_V_192_619_C</view>
+  		<view>PHMSA_MAOP_V_COMPREVIEW</view>
+  		<view>PHMSA_MAOP_V_192_611</view>
+  		<view>PHMSA_MAOP_V_192_619</view>
+  		<view>PHMSA_MAOP_V_192_619_A</view>
+  		<view>PHMSA_MAOP_V_192_619_A1</view>
+	</views>
+	<hostname>
+		gisp01-crs.sempra.com
+	</hostname>
+	<env>PRO_HP_PUB</env>
+    <user>GFAPDM</user>
+    <pass>fsd.db.01!</pass>
+    <service>gisphp01</service>
+    <description>@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = gisp01-crs.sempra.com)(PORT = 1521))(LOAD_BALANCE = yes))(CONNECT_DATA =(SERVICE_NAME = gisphp01)))</description>
+    <xlsxname>ReportPHMSA</xlsxname>
+</phmsa>

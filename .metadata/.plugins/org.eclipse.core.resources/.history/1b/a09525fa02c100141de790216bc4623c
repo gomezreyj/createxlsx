@@ -1,0 +1,18 @@
+<psep>
+	<views>
+  		<view>PSEP_SEGMENTS</view>
+  		<view>PSEP_SUMMARY_MILEAGE_BY_PHASE</view>
+  		<view>PSEP_SUMMARY_MILEAGE_COMBINED</view>
+  		<view>PSEP_SUMMARY_MILEAGE_SCG</view>
+  		<view>PSEP_SUMMARY_MILEAGE_SDG</view>
+	</views>
+	<hostname>
+		gisp01-crs.sempra.com
+	</hostname>
+	<env>PRO_HP_EDT</env>
+    <user>GFAPDM</user>
+    <pass>fsd.db.03!</pass>
+    <service>gisphp03</service>
+    <description>@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = gisp01-crs.sempra.com)(PORT = 1521))(LOAD_BALANCE = yes))(CONNECT_DATA =(SERVICE_NAME = gisphp03)))</description>
+    <xlsxname>Reportpsep.xlsx</xlsxname>
+</psep>

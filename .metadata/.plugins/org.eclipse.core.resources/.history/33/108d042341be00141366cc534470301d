@@ -1,0 +1,12 @@
+package com.se.uti;
+
+import org.apache.poi.ss.usermodel.Row;
+
+public class Assert {
+
+	public static void assertNull(Row row) {
+		// TODO Auto-generated method stub
+		System.out.println("Null");
+	}
+
+}

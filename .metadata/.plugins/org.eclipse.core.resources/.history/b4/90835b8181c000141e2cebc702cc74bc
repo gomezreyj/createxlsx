@@ -1,0 +1,21 @@
+<phmsa>
+	<views>
+  		<view></view>
+  		<view></view>
+  		<view></view>
+  		<view></view>
+	</views>
+	<hostname>
+		gisp01-crs.sempra.com
+	</hostname>
+	<env>
+		PRO_HP_EDT
+	</env>
+    <user>
+    	GFAPDM
+    </user>
+    <pass>
+      fsd.db.03!
+    </pass>
+
+</phmsa>
