@@ -30,6 +30,8 @@ import java.text.SimpleDateFormat;
 import junit.framework.Assert;
 import oracle.sql.JAVA_STRUCT;
 
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.DataFormat;
@@ -38,6 +40,7 @@ import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
@@ -46,6 +49,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Node;
 import org.w3c.dom.Element;
+import org.xml.sax.SAXException;
 
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -58,6 +62,7 @@ import java.util.jar.JarFile;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.Options;
@@ -84,6 +89,7 @@ public class CreateBigXlsx {
 	public final static String DRIVER = "oracle.jdbc.driver.OracleDriver";
 //	public final static String URL = "jdbc:oracle:thin:@(DESCRIPTION =(ADDRESS_LIST = (ADDRESS = (PROTOCOL = TCP)(HOST = gisp01-crs.sempra.com)(PORT = 1521))(LOAD_BALANCE = yes))(CONNECT_DATA =(SERVICE_NAME = gisphp03)))";
 	public final static String URL = "jdbc:oracle:thin:";
+	final static Logger logger = Logger.getLogger(CreateBigXlsx.class);
 	
 	/**
 	   * String to hold the name of the private key file.
@@ -108,15 +114,15 @@ public class CreateBigXlsx {
         try {
 			Class.forName(DRIVER);
 		} catch (ClassNotFoundException e) {
-			System.out.println("ERROR: Loading Oracle DRIVER");
+			logger.error("ERROR: Loading Oracle DRIVER");
 			e.printStackTrace();
 		}   
         Connection conn = null;
         try {
 			conn = DriverManager.getConnection(URL + service,user,pass);
-        	System.out.println("Connected to Oracle");
+			logger.info("Connected to Oracle");
 		} catch (SQLException e) {
-			System.out.println("ERROR: Getting connection to Oracle");
+			logger.error("ERROR: Getting connection to Oracle");
 			e.printStackTrace();
 		}   
         return conn;
@@ -164,12 +170,14 @@ public class CreateBigXlsx {
          }
          catch(FileNotFoundException fnf)
 		 {
-			  System.out.println("Private Key file not found.");
+        	 logger.error("Private Key file not found.");
 		 } 
          catch (IOException ioe) 
          {
+        	logger.error("IO Exception");
 		    ioe.printStackTrace();
 		 } catch (ClassNotFoundException cnfe) {
+			logger.error("Class Not Found");
 			cnfe.printStackTrace();
 		}
         
@@ -185,7 +193,7 @@ public class CreateBigXlsx {
 	 Return:
 	   The absolute path location for private key and encrypted password files
 	 */
-	public String unPackJar(String privateKey, String fileNameToDecrypt)
+	public String getJarFilesPath(String privateKey, String fileNameToDecrypt)
 	{
 		File nf = null;
 		try
@@ -200,6 +208,7 @@ public class CreateBigXlsx {
 	          while (entries.hasMoreElements())
 	          {
 	        	  JarEntry entry=(JarEntry)entries.nextElement();
+	        	  //System.out.println("JAR Entry: " + entry.getName());
 	        	  if ( entry.getName().toLowerCase().contains(privateKey) || entry.getName().toLowerCase().contains(fileNameToDecrypt))
 	        	  {
 	        		 nf = new File(destdir,entry.getName());
@@ -224,6 +233,7 @@ public class CreateBigXlsx {
 	           jf.close();
 	        }
 			catch (IOException e) {
+				logger.error("IO Exception UnPacking JAR");
 				e.printStackTrace();
 			}
 	        
@@ -242,74 +252,165 @@ public class CreateBigXlsx {
 	{
 		try {
 			FileUtils.deleteDirectory(new File(dirName));
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
+		} 
+		catch (IOException e) 
+		{
+			logger.error("IO Exception Deleting Directory");
 			e.printStackTrace();
 		}
 	}
 	
+	/*
+	 * This method create a document using the report config file.
+	 * Parameters:
+	 *    fXmlFile: the name of the xml associated with the report
+	 * Return: a Document object
+	 */
 	
+	Document getDocument(File xmlFile)
+	{	
+		Document doc = null;
+		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+    	DocumentBuilder dBuilder;
+		try {
+			dBuilder = dbFactory.newDocumentBuilder();
+			doc = dBuilder.parse(xmlFile);
+	    	doc.getDocumentElement().normalize();
+		} catch (ParserConfigurationException pe) {
+			logger.error("PARSE: " + pe.getMessage());
+		}
+		catch( IOException ioe)
+		{
+			logger.error("I/O:" + ioe.getMessage());
+		}
+		catch(SAXException saxe)
+		{
+			logger.error("SAX: " + saxe.getMessage());
+		}
+    	return doc;
+	}
+
+	/*
+	 * This method instantiate a transport object that contains
+	 * all the report config values
+	 * Parameters:
+	 *    doc: the document associated with the report
+	 * Return: all the config values from the xml report config
+	 */
+	ReportConfigTO instantiateAttributes(Document doc)
+	{
+		ReportConfigTO reportTO = new ReportConfigTO();
+		
+		reportTO.setUser(doc.getElementsByTagName("user").item(0).getTextContent());
+		reportTO.setFiletodecrypt(doc.getElementsByTagName("filetodecrypt").item(0).getTextContent());
+		logger.info("File to be Decrypted: " + reportTO.getFiletodecrypt());
+		reportTO.setPk(doc.getElementsByTagName("pk").item(0).getTextContent());
+    	logger.info("Private Key File Name: " + reportTO.getPk());  	
+    	reportTO.setDescription(doc.getElementsByTagName("description").item(0).getTextContent());
+    	reportTO.setXlsxname(doc.getElementsByTagName("xlsxname").item(0).getTextContent());
+    	reportTO.setLogfile(doc.getElementsByTagName("logfile").item(0).getTextContent());	
+		return reportTO;
+	}
+	
+	/*
+	 * This method get the properties of the log4j in order to find the name of the log file.
+	 * Parameters:
+	 *     logFile: name of the physical log4j property file
+	 * Return: nothing 
+	 */
+	
+    Properties setProperties(String logFile)
+	{
+		Properties props = new Properties();
+    	InputStream in = this.getClass().getClassLoader().getResourceAsStream("com/se/uti/resources/log4j.properties");
+    	try {
+			props.load(in);
+		} catch (IOException io) {
+			logger.error("PROPERTY FILE: " + io.getMessage());
+		}   	
+    	logger.info("LOGFILENAME: " + props.getProperty("log4j.appender.file.File"));
+    	
+    	// Lets set dynamically the name of the log file
+    	props.setProperty("log4j.appender.file.File", logFile); //reportTO.getLogfile());
+    	//PropertiesConfigurator is used to configure logger from properties file
+        PropertyConfigurator.configure(props); 
+        return props;
+	}
+    
+    XSSFCellStyle getDisclaimerStyle(SXSSFWorkbook wb)
+    {
+        XSSFCellStyle disclaimerStyle = (XSSFCellStyle) wb.createCellStyle();
+	    disclaimerStyle.setWrapText(true);
+	    disclaimerStyle.setFillForegroundColor(IndexedColors.LIGHT_TURQUOISE.getIndex());
+	    disclaimerStyle.setFillPattern(XSSFCellStyle.SOLID_FOREGROUND);
+        return disclaimerStyle;
+    }
+    
+    SXSSFSheet getDisclaimerSheet(SXSSFWorkbook wb, String disclaimer, XSSFCellStyle disclaimerStyle)
+    {
+    	SXSSFSheet disclaimerSheet = null; 
+    	disclaimerSheet = (SXSSFSheet) wb.createSheet("DISCLAIMER");   
+	    Row rowDisclaimer = disclaimerSheet.createRow((short) 1);
+        Cell disclaimerCelValue = null;
+        disclaimerCelValue = rowDisclaimer.createCell((short) 1);
+        disclaimerCelValue.setCellValue(disclaimer);
+        disclaimerCelValue.setCellStyle(disclaimerStyle);         
+        disclaimerSheet.addMergedRegion(new CellRangeAddress(1,4,1,11));
+        return disclaimerSheet;
+    }
+	  
 
     public static void main(String[] args) throws Throwable {
     	
     	PrivateKey privateK = null;
-    	//Get the XML with the parameters to create the report
-    	//File fXmlFile = new File("C:\\ExportReports\\projectqueue_enc.xml");
+    	String query = null;
+        ResultSet rs = null;
+    	
+        CreateBigXlsx bigxlsx = new CreateBigXlsx();
+    	//File fXmlFile = new File("C:\\CreateXLSX_1.0\\createxlsx\\CreateBigXlsx\\projectqueue.xml");
     	File fXmlFile = new File(args[0]);
-        //File fXmlFile = new File("C:\\TestBigXLSX\\CreateBigXlsx\\phmsa.xml");
-    	DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-    	DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-    	Document doc = dBuilder.parse(fXmlFile);
     	
-    	doc.getDocumentElement().normalize();
+    	Document doc = bigxlsx.getDocument(fXmlFile);
+    	ReportConfigTO reportTO = bigxlsx.instantiateAttributes(doc);     
+    	String pathToPk = bigxlsx.getJarFilesPath(reportTO.getPk(), reportTO.getFiletodecrypt());
     	
-    	CreateBigXlsx bigxlsx = new CreateBigXlsx();
-    	String usr = doc.getElementsByTagName("user").item(0).getTextContent();
-    	
-    	// Lets get the file to decrypt from the XML property file
-    	String fileNameToDecrypt = doc.getElementsByTagName("filetodecrypt").item(0).getTextContent();
-    	System.out.println(fileNameToDecrypt);
-    	// Lets get the file to decrypt from the XML property file
-    	String privateKey = doc.getElementsByTagName("pk").item(0).getTextContent();
-    	System.out.println(privateKey);  	
- 
-    	String pathToPk = bigxlsx.unPackJar(privateKey, fileNameToDecrypt);       
-    	//String pass = doc.getElementsByTagName("pass").item(0).getTextContent();
-    	String desc = doc.getElementsByTagName("description").item(0).getTextContent();
-    	String outPutFileName = doc.getElementsByTagName("xlsxname").item(0).getTextContent();
-    	
-    	//Getting the query list   	
-        Iterator<String> iter = bigxlsx.getListQueries(doc).iterator();
-                
+        Properties props = bigxlsx.setProperties(reportTO.getLogfile());                  
         // Lets get the private key
-        privateK =  bigxlsx.getPrivateKeyFile(pathToPk + "\\" + privateKey);
-        System.out.println("before decrypt");
+        privateK =  bigxlsx.getPrivateKeyFile(pathToPk + "\\" + reportTO.getPk());
+        logger.info("Decrypting...");
+        
         //Lets decrypt the passwd file
-        byte[] dbpass =  EncryptionUtil.decrypt(new File(pathToPk + "\\" + fileNameToDecrypt), privateK);
+        byte[] dbpass =  EncryptionUtil.decrypt(new File(pathToPk + "\\" + reportTO.getFiletodecrypt()), privateK);
         String passwd = new String(dbpass);
-        Connection conn = bigxlsx.getConnection(desc,usr,passwd);
+        Connection conn = bigxlsx.getConnection(reportTO.getDescription(),reportTO.getUser(),passwd);
     	PreparedStatement stmt = null;
     	     	
-    	System.out.println("Creating WoorkBook");
+    	logger.info("Creating WoorkBook...");
         SXSSFWorkbook wb = new SXSSFWorkbook(100); // keep 100 rows in memory, exceeding rows will be flushed to disk
-        System.out.println("Finished Creating WoorkBook");
+        logger.info("Finished Creating WoorkBook");
                 
          //Cell style for header row
-           CellStyle cStyle = wb.createCellStyle();
-           cStyle.setFillForegroundColor(IndexedColors.LIGHT_TURQUOISE.getIndex());
-           cStyle.setFillPattern(XSSFCellStyle.SOLID_FOREGROUND);
-           Font f = wb.createFont();
-           f.setFontHeightInPoints((short) 12);
-           cStyle.setFont(f);
+         CellStyle cStyle = wb.createCellStyle();
+         cStyle.setFillForegroundColor(IndexedColors.LIGHT_TURQUOISE.getIndex());
+         cStyle.setFillPattern(XSSFCellStyle.SOLID_FOREGROUND);
+         Font f = wb.createFont();
+         f.setFontHeightInPoints((short) 12);
+         cStyle.setFont(f);
            
-           CellStyle dateStyle = wb.createCellStyle();
-           DataFormat dateFormat = wb.createDataFormat();
-           dateStyle.setDataFormat(dateFormat.getFormat("MM/dd/yyyy"));
+         CellStyle dateStyle = wb.createCellStyle();
+         DataFormat dateFormat = wb.createDataFormat();
+         dateStyle.setDataFormat(dateFormat.getFormat("MM/dd/yyyy"));
             
-           String query = null;
-           ResultSet rs = null;
+         XSSFCellStyle disclaimerStyle = bigxlsx.getDisclaimerStyle(wb);  
+      
+         SXSSFSheet disclaimerSheet = null;
+         String disclaimer = props.getProperty("disclaimer"); 
+         disclaimerSheet =  bigxlsx.getDisclaimerSheet(wb, disclaimer, disclaimerStyle);
+         logger.info("DISCLAIMER = " + disclaimer);               
                       
            // Iterate over the list of queries
+           //Getting the query list   	
+           Iterator<String> iter = bigxlsx.getListQueries(doc).iterator();
            while ( iter.hasNext())
            { 
         	  //New Sheet
@@ -321,19 +422,17 @@ public class CreateBigXlsx {
         	  query = "SELECT * FROM " + iter.next();
         	  //Create the sheet
         	  sheet = (SXSSFSheet) wb.createSheet(query.substring(14));
-        	  
-        	  System.out.println("Preparing Statement");
-            
-        	  stmt = conn.prepareStatement(query);
-              System.out.println("Finished Preparing Statement");
-              System.out.println("Executing Query: " + query);
+        	  logger.info("Preparing Statement");
+              stmt = conn.prepareStatement(query);
+              logger.info("Finished Preparing Statement");
+              logger.info("Executing Query: " + query);
               rs = stmt.executeQuery();
-              System.out.println("Finished Executing Query");
+              logger.info("Finished Executing Query");
               
               //Let get the metadata of the table
               ResultSetMetaData metaData = rs.getMetaData();
               int colCount = metaData.getColumnCount();
-              System.out.println("Number of Columns:" + colCount);
+              logger.info("Number of Columns:" + colCount);
               int colType = 1;
               while ( colType <= colCount) {
                 String columnType = metaData.getColumnClassName(colType);
@@ -374,10 +473,8 @@ public class CreateBigXlsx {
                       sheet.setColumnWidth(idy, (tableInfo.getColumnName().trim().length() * 490 ) > 65025 ? 65025 :  tableInfo.getColumnName().trim().length() * 490 );
                   }
                   idy++;
-              }
-              
-              
-             System.out.println("Populating Sheet...");
+              }            
+            logger.info("Populating Sheet...");
             // Lets iterate over the result set and create a row per record
             // then create cells as much columns then populate each cell
             while ( rs.next() )
@@ -427,32 +524,30 @@ public class CreateBigXlsx {
         	}
         	
           }
-          System.out.println("Finished Populating Sheet...");
+          logger.info("Finished Populating Sheet...");
         }     
         // Get the date of the report and append it to the filename
         DateFormat df = new SimpleDateFormat("yyyyMMdd");
         java.util.Date date =  new java.util.Date();
         
-        FileOutputStream fileOut = new FileOutputStream(outPutFileName + "_" + df.format(date) + ".xlsx");
-        
-        //FileOutputStream fileOut = new FileOutputStream(props.getProperty("excel_path").trim() + excelFilename.trim() );
-        
+        FileOutputStream fileOut = new FileOutputStream(reportTO.getXlsxname() + "_" + df.format(date) + ".xlsx");     
         wb.write(fileOut);
-        System.out.println("Finished Creating Workbook...");
+        logger.info("Finished Creating Workbook...");
         conn.close();
         stmt.close();
         rs.close();
         fileOut.close();
         
-        System.out.println("Deleting Temporary Files..");
+        logger.info("Deleting Temporary Files..");
         bigxlsx.deleteDir("temp1");
         if ( wb.dispose() )
-        	System.out.println("Temporary Files Deleted Successfully...");
+        	logger.info("Temporary Files Deleted Successfully...");
         else 
-        	System.out.println("ERROR: Could not deleted Temporary Files !!");
-               
+        	logger.info("ERROR: Could not deleted Temporary Files !!");
+        
+        logger.info("Closing Workbook");     
         wb.close();    
-
+        logger.info("Process Finished Successfully");
     }
     
 }

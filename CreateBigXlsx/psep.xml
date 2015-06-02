@@ -11,8 +11,11 @@
 	</hostname>
 	<env>PRO_HP_PUB</env>
     <user>GFAPDM</user>
-    <pass>fsd.db.01!</pass>
+    <filetodecrypt>pseppassenc.pwd</filetodecrypt>
+    <pass></pass>
     <service>gisphp01</service>
     <description>@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = gisp01-crs.sempra.com)(PORT = 1521))(LOAD_BALANCE = yes))(CONNECT_DATA =(SERVICE_NAME = gisphp01)))</description>
-    <xlsxname>ReportPSEP</xlsxname>
+    <xlsxname>PSEP_Reports</xlsxname>
+    <pk>irpk</pk>
+	<logfile>psep.log</logfile>
 </psep>
